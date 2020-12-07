@@ -1,7 +1,10 @@
 /** @jsxImportSource @emotion/react */
 import qs from "qs";
-import { Link } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import Plot from "react-plotly.js";
+import { Link, useLocation } from "react-router-dom";
 import "twin.macro";
+import { theme } from "twin.macro";
 import rk from "./rk.json";
 import { Badge, BadgeLabel, BadgeList, BadgeValue } from "./shared/Badge";
 import { Card, CardContent, CardHeader, CardTitle } from "./shared/Card";
@@ -48,11 +51,12 @@ const SelectLeftPanelIcon = (props) => {
 
 const RungeKuttaMethodListItem = ({ rungeKuttaMethod }) => {
   const searchParams = useSearchParams();
-  const compareLeftURL = `/runge-kutta-methods/compare${qs.stringify(
+  const location = useLocation();
+  const compareLeftURL = `${location.pathname}${qs.stringify(
     { ...searchParams, left: rungeKuttaMethod.id },
     { addQueryPrefix: true }
   )}`;
-  const compareRightURL = `/runge-kutta-methods/compare${qs.stringify(
+  const compareRightURL = `${location.pathname}${qs.stringify(
     { ...searchParams, right: rungeKuttaMethod.id },
     { addQueryPrefix: true }
   )}`;
@@ -207,7 +211,7 @@ const RungeKuttaMethodDetails = ({ rungeKuttaMethodId }) => {
 export const RungeKuttaMethodCompare = () => {
   const { left, right } = useSearchParams();
   return (
-    <div tw="space-y-4 sm:(space-y-0 flex-1 grid grid-cols-2 gap-4 min-h-full)">
+    <div tw="space-y-4 p-4 sm:(space-y-0 flex-1 grid grid-cols-2 gap-4 min-h-full)">
       <RungeKuttaMethodDetails rungeKuttaMethodId={left} />
       <RungeKuttaMethodDetails rungeKuttaMethodId={right} />
     </div>
@@ -215,5 +219,58 @@ export const RungeKuttaMethodCompare = () => {
 };
 
 export const RungeKuttaMethodGraph = () => {
-  return null;
+  const ref = useRef();
+  const { left, right } = useSearchParams();
+  const data = [left, right]
+    .map((rungeKuttaMethodId) =>
+      rk.find(
+        (rungeKuttaMethod) => rungeKuttaMethod.id === Number(rungeKuttaMethodId)
+      )
+    )
+    .filter(Boolean)
+    .map((rungeKuttaMethod, index) => ({
+      type: "scattergl",
+      name: rungeKuttaMethod.label,
+      mode: "lines",
+      line: {
+        color:
+          index === 0 ? theme`colors.primary.300` : theme`colors.primary.700`,
+      },
+      x: rungeKuttaMethod.stability_domain.x,
+      y: rungeKuttaMethod.stability_domain.y,
+    }));
+
+  const [width, setWidth] = useState(500);
+  const [height, setHeight] = useState(500);
+
+  useEffect(() => {
+    const container = ref.current;
+    if (!container) {
+      return;
+    }
+    const listener = () => {
+      const { width, height } = container.getBoundingClientRect();
+      setWidth(width);
+      setHeight(height);
+    };
+    listener();
+    window.addEventListener("resize", listener);
+    return () => window.removeEventListener("resize", listener);
+  }, []);
+
+  return (
+    <div tw="w-full h-full" ref={ref}>
+      <Plot
+        data={data}
+        layout={{
+          yaxis: { scaleanchor: "x", scaleratio: 1 },
+          showlegend: true,
+          legend: { yanchor: "bottom", orientation: "h" },
+          width,
+          height,
+          margin: { l: 0, r: 0, t: 0, b: 0 },
+        }}
+      />
+    </div>
+  );
 };

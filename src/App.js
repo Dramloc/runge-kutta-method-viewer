@@ -56,7 +56,7 @@ const App = () => {
             <div tw="flex flex-col flex-1 overflow-hidden">
               <Header />
               <main
-                tw="flex-1 relative overflow-y-auto focus:outline-none p-4"
+                tw="flex-1 relative overflow-y-auto focus:outline-none"
                 tabindex="0"
               >
                 <Switch>
